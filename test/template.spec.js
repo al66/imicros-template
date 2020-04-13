@@ -6,36 +6,29 @@ const { AclMixin } = require("imicros-acl");
 
 const timestamp = Date.now();
 
-// mock imicros-store mixin
-const Store = (options) => { return {
+const globalStore ={};
+
+// mock imicros-minio mixin
+const Store = (/*options*/) => { return {
     methods: {
-        async set ({ ctx = null, key = null, value = null } = {}) {
-            if ( !ctx || !key ) return false;
+        async putString ({ ctx = null, objectName = null, value = null } = {}) {
+            if ( !ctx || !objectName ) return false;
             
-            let internal = Buffer.from(ctx.meta.acl.ownerIdr + "~" + key).toString("base64");
+            let internal = Buffer.from(ctx.meta.acl.ownerId + "~" + objectName).toString("base64");
             
             this.store[internal] = value;
             return true;
         },
-        async get ({ ctx = null, key }) {
-            if ( !ctx || !key ) throw new Error("missing parameter");
+        async getString ({ ctx = null, objectName }) {
+            if ( !ctx || !objectName ) throw new Error("missing parameter");
 
-            let internal = Buffer.from(ctx.meta.acl.ownerIdr + "~" + key).toString("base64");
+            let internal = Buffer.from(ctx.meta.acl.ownerId + "~" + objectName).toString("base64");
             
             return this.store[internal];            
-        },   
-        async del ({ ctx = null, key }) {
-            if ( !ctx || !key ) throw new Error("missing parameter");
-            
-            let internal = Buffer.from(ctx.meta.acl.ownerIdr + "~" + key).toString("base64");
-            
-            delete this.store[internal];
-            
-            return true;            
         }   
     },
     created () {
-        this.store = options.store;
+        this.store = globalStore;
     }
 };};
 
@@ -57,7 +50,7 @@ describe("Test template service", () => {
             });
             service = await broker.createService(Template, Object.assign({ 
                 name: "template",
-                mixins: [Store({ store: {} }), AclMixin]
+                mixins: [Store(), AclMixin]
             }));
             await broker.start();
             expect(service).toBeDefined();
@@ -65,7 +58,7 @@ describe("Test template service", () => {
 
     });
     
-    describe("Test compile and render", () => {
+    describe("Test render", () => {
 
         let opts;
         
@@ -79,29 +72,19 @@ describe("Test template service", () => {
                     }, 
                     user: { 
                         id: `1-${timestamp}` , 
-                        email: `1-${timestamp}@host.com` }, 
-                    access: [`1-${timestamp}`, `2-${timestamp}`] 
+                        email: `1-${timestamp}@host.com` }
                 } 
             };
         });
         
-        it("it should compile and store a template", async () => {
-            let params = {
-                template: "Hello, {name}!",
-                name: "hello"
-            };
-            return broker.call("template.compile", params, opts).then(res => {
-                expect(res).toBeDefined();
-                expect(res.name).toBeDefined();
-            });
-                
-        });
-        
         it("it should render the template", async () => {
             let params = {
-                name: "hello",
+                name: "path/to/template/hello.tpl",
                 data: { name: "my friend" }
             };
+            let internal = Buffer.from(opts.meta.acl.ownerId + "~" + params.name).toString("base64");
+            globalStore[internal] = "Hello, {{ name }}!";
+
             return broker.call("template.render", params, opts).then(res => {
                 expect(res).toBeDefined();
                 expect(res).toEqual("Hello, my friend!");
@@ -109,88 +92,17 @@ describe("Test template service", () => {
                 
         });
         
-        it("it should compile and store a second template", async () => {
-            opts.meta.acl.ownerId = `g2-${timestamp}`;
+        it("it should render template with deep data structure", async () => {
             let params = {
-                template: "Hello, {name} from second group!",
-                name: "hello"
+                name: "path/to/template/hello.tpl",
+                data: { name: { lastName: "my friend" } }
             };
-            return broker.call("template.compile", params, opts).then(res => {
-                expect(res).toBeDefined();
-                expect(res.name).toBeDefined();
-            });
-                
-        });
+            let internal = Buffer.from(opts.meta.acl.ownerId + "~" + params.name).toString("base64");
+            globalStore[internal] = "Hello, {{ name.lastName }}!";
 
-        it("it should render the second template", async () => {
-            opts.meta.acl.ownerId = `g2-${timestamp}`;
-            let params = {
-                name: "hello",
-                data: { name: "my friend" }
-            };
-            return broker.call("template.render", params, opts).then(res => {
-                expect(res).toBeDefined();
-                expect(res).toEqual("Hello, my friend from second group!");
-            });
-                
-        });
-                
-        it("it should remove the second template", async () => {
-            opts.meta.acl.ownerId = `g2-${timestamp}`;
-            let params = {
-                name: "hello"
-            };
-            return broker.call("template.remove", params, opts).then(res => {
-                expect(res).toBeDefined();
-                expect(res).toEqual(true);
-            });
-                
-        });
-        
-
-        it("it should render the first template again", async () => {
-            let params = {
-                name: "hello",
-                data: { name: "my friend" }
-            };
             return broker.call("template.render", params, opts).then(res => {
                 expect(res).toBeDefined();
                 expect(res).toEqual("Hello, my friend!");
-            });
-                
-        });
-
-        it("it should update a template", async () => {
-            let params = {
-                template: "Hello, {name}! (updated)",
-                name: "hello"
-            };
-            return broker.call("template.compile", params, opts).then(res => {
-                expect(res).toBeDefined();
-                expect(res.name).toBeDefined();
-            });
-                
-        });
-        
-        it("it should render the updated template", async () => {
-            let params = {
-                name: "hello",
-                data: { name: "my friend" }
-            };
-            return broker.call("template.render", params, opts).then(res => {
-                expect(res).toBeDefined();
-                expect(res).toEqual("Hello, my friend! (updated)");
-            });
-                
-        });
-
-        it("it should remove the first template", async () => {
-            let params = {
-                name: "hello"
-            };
-            return broker.call("template.remove", params, opts).then(res => {
-                expect(res).toBeDefined();
-                expect(res).toEqual(true);
             });
                 
         });
