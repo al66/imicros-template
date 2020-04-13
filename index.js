@@ -4,6 +4,5 @@
 "use strict";
 
 module.exports = {
-    Template: require("./lib/template"),
-    TemplateMixin: require("./lib/template.mixin")
+    Template: require("./lib/template")
 };
