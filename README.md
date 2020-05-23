@@ -12,14 +12,12 @@ $ npm install imicros-templates --save
 ```
 ## Dependencies
 Required mixins (or a similar mixin with the same notation):
-- [imicros-acl](https://github.com/al66/imicros-acl)
 - [imciros-minio](https://github.com/al66/imicros-minio)
 
 # Usage
 ## Usage template service
 ```js
 const { ServiceBroker } = require("moleculer");
-const { AclMixin } = require("imicros-acl");
 const { MinioMixin } = require("imicros-minio");
 const { Template } = require("imicros-template");
 
@@ -27,7 +25,7 @@ broker = new ServiceBroker({
     logger: console
 });
 broker.createService(Template, Object.assign({ 
-    mixins: [MinioMixin(), AclMixin]
+    mixins: [MinioMixin()]
 }));
 broker.start();
 ```

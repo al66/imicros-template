@@ -2,7 +2,6 @@
 
 const { ServiceBroker } = require("moleculer");
 const { Template } = require("../index");
-const { AclMixin } = require("imicros-acl");
 
 const timestamp = Date.now();
 
@@ -50,7 +49,7 @@ describe("Test template service", () => {
             });
             service = await broker.createService(Template, Object.assign({ 
                 name: "template",
-                mixins: [Store(), AclMixin]
+                mixins: [Store()]
             }));
             await broker.start();
             expect(service).toBeDefined();
