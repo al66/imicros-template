@@ -133,6 +133,29 @@ describe("Test template service", () => {
                 
         });
         
+        it("it should render an given template", async () => {
+            let params = {
+                template: "Hello, {{ name }}!",
+                data: { name: "my best friend" }
+            };
+            return broker.call("template.render", params, opts).then(res => {
+                expect(res).toBeDefined();
+                expect(res).toEqual("Hello, my best friend!");
+            });
+                
+        });
+        
+        it("it should return null due to missing template", async () => {
+            let params = {
+                data: { name: "my friend" }
+            };
+            return broker.call("template.render", params, opts).then(res => {
+                expect(res).toBeDefined();
+                expect(res).toEqual(null);
+            });
+                
+        });
+        
     });
         
     describe("Test stop broker", () => {
