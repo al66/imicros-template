@@ -10,7 +10,7 @@ const globalStore ={};
 // mock imicros-minio mixin
 const Store = (/*options*/) => { return {
     methods: {
-        async putString ({ ctx = null, objectName = null, value = null } = {}) {
+        async putObject ({ ctx = null, objectName = null, value = null } = {}) {
             if ( !ctx || !objectName ) return false;
             
             let internal = Buffer.from(ctx.meta.acl.ownerId + "~" + objectName).toString("base64");
@@ -18,7 +18,7 @@ const Store = (/*options*/) => { return {
             this.store[internal] = value;
             return true;
         },
-        async getString ({ ctx = null, objectName }) {
+        async getObject ({ ctx = null, objectName }) {
             if ( !ctx || !objectName ) throw new Error("missing parameter");
 
             let internal = Buffer.from(ctx.meta.acl.ownerId + "~" + objectName).toString("base64");
@@ -45,7 +45,7 @@ describe("Test template service", () => {
         it("it should start the broker", async () => {
             broker = new ServiceBroker({
                 logger: console,
-                logLevel: "info" //"debug"
+                logLevel: "debug" // "info" //"debug"
             });
             service = await broker.createService(Template, Object.assign({ 
                 name: "template",
@@ -82,7 +82,7 @@ describe("Test template service", () => {
                 data: { name: "my friend" }
             };
             let internal = Buffer.from(opts.meta.acl.ownerId + "~" + params.name).toString("base64");
-            globalStore[internal] = "Hello, {{ name }}!";
+            globalStore[internal] = { template: "Hello, {{ name }}!" };
 
             return broker.call("template.render", params, opts).then(res => {
                 expect(res).toBeDefined();
@@ -97,11 +97,38 @@ describe("Test template service", () => {
                 data: { name: { lastName: "my friend" } }
             };
             let internal = Buffer.from(opts.meta.acl.ownerId + "~" + params.name).toString("base64");
-            globalStore[internal] = "Hello, {{ name.lastName }}!";
+            globalStore[internal] = { template: "Hello, {{ name.lastName }}!" };
 
             return broker.call("template.render", params, opts).then(res => {
                 expect(res).toBeDefined();
                 expect(res).toEqual("Hello, my friend!");
+            });
+                
+        });
+        
+        it("it should return null due to missing object", async () => {
+            let params = {
+                name: "path/to/template/missing.tpl",
+                data: { name: "my friend" }
+            };
+            return broker.call("template.render", params, opts).then(res => {
+                expect(res).toBeDefined();
+                expect(res).toEqual(null);
+            });
+                
+        });
+        
+        it("it should return null due to unvalid template", async () => {
+            let params = {
+                name: "path/to/template/unvalid.tpl",
+                data: { name: "my friend" }
+            };
+            let internal = Buffer.from(opts.meta.acl.ownerId + "~" + params.name).toString("base64");
+            globalStore[internal] = { template: "Hello, {{ name.lastName !" };  // missing closing brackets...
+          
+            return broker.call("template.render", params, opts).then(res => {
+                expect(res).toBeDefined();
+                expect(res).toEqual(null);
             });
                 
         });
