@@ -1,6 +1,6 @@
 {
   "name": "imicros-templates",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "author": "Andreas Leinen <andreas.leinen@imicros.de> (www.imicros.de)",
   "license": "MIT",
   "description": "Moleculer service for template rendering",
@@ -35,10 +35,10 @@
     "render"
   ],
   "devDependencies": {
-    "jest": "^26.6.3",
-    "moleculer": "^0.14.12"
+    "jest": "^27.2.5",
+    "moleculer": "^0.14.17"
   },
   "dependencies": {
-    "handlebars": "^4.7.6"
+    "handlebars": "^4.7.7"
   }
 }
